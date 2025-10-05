@@ -17,8 +17,8 @@ use winit::{
 
 use cgmath::{Matrix4, Vector3};
 use glium::{
-	glutin::surface::WindowSurface, implement_vertex, uniform, Blend, BlendingFunction, Frame,
-	IndexBuffer, LinearBlendingFactor, Program, Rect, Surface, VertexBuffer,
+	Blend, BlendingFunction, Frame, IndexBuffer, LinearBlendingFactor, Program, Rect, Surface,
+	VertexBuffer, glutin::surface::WindowSurface, implement_vertex, uniform,
 };
 
 use misc::*;

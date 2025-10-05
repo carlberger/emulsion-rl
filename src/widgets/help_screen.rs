@@ -3,13 +3,13 @@ use std::rc::Rc;
 
 use gelatin::cgmath::{Matrix4, Vector3};
 
-use gelatin::glium::{uniform, Frame, Surface};
+use gelatin::glium::{Frame, Surface, uniform};
 
+use gelatin::NextUpdate;
 use gelatin::add_common_widget_functions;
 use gelatin::misc::{Alignment, Length, LogicalRect, LogicalVector, WidgetPlacement};
 use gelatin::picture::Picture;
 use gelatin::window::RenderValidity;
-use gelatin::NextUpdate;
 use gelatin::{DrawContext, Event, Widget, WidgetData, WidgetError};
 
 struct HelpScreenData {

@@ -1,5 +1,5 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::path::PathBuf;
 
 use super::image_loader::*;
@@ -63,11 +63,7 @@ impl PendingRequests {
 	}
 
 	pub fn contains(&self, id: &u32) -> bool {
-		if let Some(info) = self.by_id.get(id) {
-			!info.finished
-		} else {
-			false
-		}
+		if let Some(info) = self.by_id.get(id) { !info.finished } else { false }
 	}
 
 	pub fn set_finished(&mut self, id: &u32) {

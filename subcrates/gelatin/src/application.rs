@@ -8,11 +8,11 @@ use std::{
 
 use winit::{
 	event::{Event, WindowEvent},
-	event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget},
+	event_loop::{ControlFlow, EventLoop, EventLoopProxy, ActiveEventLoop},
 	window::WindowId,
 };
 
-use crate::{window::Window, NextUpdate};
+use crate::{NextUpdate, window::Window};
 
 // const MAX_SLEEP_DURATION: std::time::Duration = std::time::Duration::from_millis(4);
 static EXIT_REQUESTED: AtomicBool = AtomicBool::new(false);
@@ -21,7 +21,7 @@ pub fn request_exit() {
 	EXIT_REQUESTED.store(true, Ordering::Relaxed);
 }
 
-fn set_control_flow<E>(event_loop: &EventLoopWindowTarget<E>, control_flow: ControlFlow) {
+fn set_control_flow(event_loop: &ActiveEventLoop, control_flow: ControlFlow) {
 	if let ControlFlow::WaitUntil(time) = control_flow {
 		let very_short_time_from_now = Instant::now() + Duration::from_micros(100);
 		if time < very_short_time_from_now {
@@ -35,7 +35,7 @@ fn set_control_flow<E>(event_loop: &EventLoopWindowTarget<E>, control_flow: Cont
 }
 
 /// Returns true if original was replaced by new
-fn aggregate_control_flow<E>(event_loop: &EventLoopWindowTarget<E>, new: ControlFlow) -> bool {
+fn aggregate_control_flow(event_loop: &ActiveEventLoop, new: ControlFlow) -> bool {
 	let original = event_loop.control_flow();
 	match new {
 		ControlFlow::Poll => {
@@ -66,7 +66,7 @@ fn aggregate_control_flow<E>(event_loop: &EventLoopWindowTarget<E>, new: Control
 ///
 /// We use this function to check if the time specified in WaitUntil has already
 /// been passed and if it is, then we change the control flow, to get "un-stuck"
-fn sanitize_control_flow<E>(event_loop: &EventLoopWindowTarget<E>) {
+fn sanitize_control_flow(event_loop: &ActiveEventLoop) {
 	set_control_flow(event_loop, event_loop.control_flow());
 }
 
@@ -88,7 +88,7 @@ where
 {
 	pub fn new() -> Self {
 		Application {
-			event_loop: EventLoopBuilder::<UserEvent>::with_user_event().build().unwrap(),
+			event_loop: EventLoop::<UserEvent>::with_user_event().build().unwrap(),
 			windows: HashMap::new(),
 			global_handlers: Vec::new(),
 			at_exit: None,
@@ -179,7 +179,7 @@ where
 						} else {
 							destroyed = false;
 						}
-						windows.get(&window_id).unwrap().process_event(event, event_loop);
+						windows.get(&window_id).unwrap().process_event::<UserEvent>(event, event_loop);
 						if destroyed {
 							windows.remove(&window_id);
 						}

@@ -2,7 +2,7 @@ use std::rc::{Rc, Weak};
 
 use std::time::{Duration, Instant};
 
-use gelatin::{label::Label, misc::*, picture::Picture, NextUpdate, Widget};
+use gelatin::{NextUpdate, Widget, label::Label, misc::*, picture::Picture};
 
 static COPY_STARTED: &[u8] = include_bytes!("../../resource/copy-started.png");
 static COPY_READY: &[u8] = include_bytes!("../../resource/copy-ready.png");

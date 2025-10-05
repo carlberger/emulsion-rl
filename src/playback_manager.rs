@@ -5,13 +5,13 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
+use rand::rng;
 use rand::seq::SliceRandom;
-use rand::thread_rng;
 
 use log::{debug, trace};
 
-use gelatin::window::Window;
 use gelatin::Display;
+use gelatin::window::Window;
 
 use crate::image_cache::{
 	self, AnimationFrameTexture, ImageCache, PathResolutionError, PathedTextureResult,
@@ -134,11 +134,7 @@ impl Playback for AnimPlayback {
 	}
 
 	fn delay_nanos(player: &ImgSequencePlayer<Self>) -> u64 {
-		if let Some(ref frame) = player.image_texture {
-			frame.delay_nano
-		} else {
-			0
-		}
+		if let Some(ref frame) = player.image_texture { frame.delay_nano } else { 0 }
 	}
 }
 
@@ -366,8 +362,7 @@ impl<P: Playback> ImgSequencePlayer<P> {
 	) -> gelatin::NextUpdate {
 		trace!(
 			"Begin `update_image`. Curr image is: {:?}. Load request is {:?}",
-			self.file_path,
-			self.load_request
+			self.file_path, self.load_request
 		);
 		let is_paused = matches!(self.playback_state, PlaybackState::Paused);
 		let no_request = matches!(self.load_request, LoadRequest::None);
@@ -382,14 +377,9 @@ impl<P: Playback> ImgSequencePlayer<P> {
 		// function early. And at the same time I want to use it's value as it is at this line.
 		let mut load_request = LoadRequest::None;
 		mem::swap(&mut self.load_request, &mut load_request);
-		let frame_delta_time_nanos;
-		match self.playback_state {
-			PlaybackState::Present | PlaybackState::RandomPresent => {
-				frame_delta_time_nanos = (NANOS_PER_SEC * 6) as i64;
-			}
-			_ => {
-				frame_delta_time_nanos = P::delay_nanos(self) as i64;
-			}
+		let frame_delta_time_nanos = match self.playback_state {
+			PlaybackState::Present | PlaybackState::RandomPresent => (NANOS_PER_SEC * 6) as i64,
+			_ => P::delay_nanos(self) as i64,
 		};
 		if self.playback_state == PlaybackState::Paused {
 			if let Err(e) = image_cache.process_prefetched(display) {
@@ -419,12 +409,8 @@ impl<P: Playback> ImgSequencePlayer<P> {
 			// This assumes that the following frames have the same delay but that's okay considering that
 			// if frame step is greater than 1 it almost certainly means that we couldn't load the
 			// next frame quiclky enough so there's not much else to do here.
-			let frame_step;
-			if frame_delta_time_nanos > 0 {
-				frame_step = elapsed_nanos / frame_delta_time_nanos;
-			} else {
-				frame_step = 0;
-			}
+			let frame_step =
+				if frame_delta_time_nanos > 0 { elapsed_nanos / frame_delta_time_nanos } else { 0 };
 			if frame_step > 0 {
 				load_request = match self.playback_state {
 					PlaybackState::Forward | PlaybackState::Present => {
@@ -540,7 +526,7 @@ impl<P: Playback> ImgSequencePlayer<P> {
 			for i in 0..dir_len {
 				self.present_remaining.push(i);
 			}
-			let mut rng = thread_rng();
+			let mut rng = rng();
 			self.present_remaining.as_mut_slice().shuffle(&mut rng);
 			true
 		} else {

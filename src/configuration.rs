@@ -134,11 +134,7 @@ impl From<IncompleteCache> for Cache {
 }
 impl Cache {
 	pub fn theme(&self) -> Theme {
-		if self.window.dark {
-			Theme::Dark
-		} else {
-			Theme::Light
-		}
+		if self.window.dark { Theme::Dark } else { Theme::Light }
 	}
 
 	pub fn set_theme(&mut self, theme: Theme) {
@@ -196,13 +192,13 @@ impl TitleSection {
 						root_index = idx as u32;
 					}
 				}
-				let path = if (component_count - root_index) <= (1 + n) {
+
+				if (component_count - root_index) <= (1 + n) {
 					file_path.to_string_lossy().trim_start_matches("\\\\?\\").to_owned().into()
 				} else {
 					let ancestor = file_path.ancestors().take(2 + n as usize).last().unwrap();
 					file_path.strip_prefix(ancestor).unwrap().to_string_lossy()
-				};
-				path
+				}
 			}
 		}
 	}

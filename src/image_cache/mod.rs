@@ -13,9 +13,8 @@ use log::trace;
 
 use gelatin::{
 	glium::{
-		self,
+		self, CapabilitiesSource,
 		texture::{MipmapsOption, RawImage2d, SrgbTexture2d},
-		CapabilitiesSource,
 	},
 	image,
 };
@@ -65,10 +64,14 @@ pub type TextureResult<T> = std::result::Result<T, TextureError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum PathResolutionError {
-	#[error("No image path has been specified. (Eg emulsion was started without it being requested to open an image or folder)")]
+	#[error(
+		"No image path has been specified. (Eg emulsion was started without it being requested to open an image or folder)"
+	)]
 	NotYetSpecified,
 
-	#[error("Could not find file path matching the request, because the Directory Filter hasn't finished yet")]
+	#[error(
+		"Could not find file path matching the request, because the Directory Filter hasn't finished yet"
+	)]
 	WaitingOnDirFilter,
 }
 
@@ -126,8 +129,6 @@ pub struct AnimationFrameTexture {
 	/// of the cell at the 3rd column and 2nd row is
 	/// (3*cell_step_size, 2*cell_step_size)
 	pub cell_step_size: u32,
-	pub grid_rows: u32,
-	pub grid_cols: u32,
 
 	pub delay_nano: u64,
 	pub orientation: Orientation,
@@ -184,8 +185,6 @@ impl AnimationFrameTexture {
 			w,
 			h,
 			cell_step_size: max_size,
-			grid_rows,
-			grid_cols,
 		})
 	}
 
@@ -210,17 +209,16 @@ fn texture_from_img_rect(
 	cell_w: u32,
 	cell_h: u32,
 ) -> TextureResult<SrgbTexture2d> {
-	let raw_image;
-	if img_w == cell_w {
+	let raw_image = if img_w == cell_w {
 		assert!(offset_x == 0);
 		let start = (offset_y as usize * img_w as usize) * 4;
 		let end = start + (cell_h as usize * cell_w as usize * 4);
-		raw_image = RawImage2d {
+		RawImage2d {
 			data: Cow::Borrowed(&img_bytes[start..end]),
 			format: glium::texture::ClientFormat::U8U8U8U8,
 			width: cell_w,
 			height: cell_h,
-		};
+		}
 	} else {
 		let cell_size = cell_w as usize * cell_h as usize * 4;
 		let mut cell_pixels = Vec::with_capacity(cell_size);
@@ -231,8 +229,8 @@ fn texture_from_img_rect(
 			let end = start + (cell_w as usize * 4);
 			cell_pixels.extend_from_slice(&img_bytes[start..end]);
 		}
-		raw_image = RawImage2d::from_raw_rgba(cell_pixels, (cell_w, cell_h));
-	}
+		RawImage2d::from_raw_rgba(cell_pixels, (cell_w, cell_h))
+	};
 
 	let x_pow = 31 - img_w.leading_zeros();
 	let y_pow = 31 - img_h.leading_zeros();
@@ -348,12 +346,12 @@ impl ImageCache {
 
 	/// Returns tru if and only if the current image has been fully loaded and it has a single frame.
 	pub fn loaded_still_image(&self) -> bool {
-		if let Some(desc) = self.dir.curr_descriptor() {
-			if let Some(img) = self.texture_cache.get(&desc.request_id) {
-				if img.fully_loaded && img.frames.len() == 1 {
-					return true;
-				}
-			}
+		if let Some(desc) = self.dir.curr_descriptor()
+			&& let Some(img) = self.texture_cache.get(&desc.request_id)
+			&& img.fully_loaded
+			&& img.frames.len() == 1
+		{
+			return true;
 		}
 		false
 	}
@@ -441,12 +439,11 @@ impl ImageCache {
 			Some(frame_id) => frame_id,
 			None => {
 				let mut retval = 0;
-				if let Some(prev_img_index) = prev_img_index {
-					if let Some(curr_img_index) = self.dir.curr_img_index() {
-						if curr_img_index == prev_img_index {
-							retval = self.current_frame_idx as isize;
-						}
-					}
+				if let Some(prev_img_index) = prev_img_index
+					&& let Some(curr_img_index) = self.dir.curr_img_index()
+					&& curr_img_index == prev_img_index
+				{
+					retval = self.current_frame_idx as isize;
 				}
 				retval
 			}
@@ -529,7 +526,9 @@ impl ImageCache {
 
 			target_path = self.dir.image_by_index(target_index).unwrap().path.clone();
 		} else {
-			log::info!("Folder is empty, no folder was open, or folder hasn't finished filtering when trying to jump to an image by index.");
+			log::info!(
+				"Folder is empty, no folder was open, or folder hasn't finished filtering when trying to jump to an image by index."
+			);
 			return Err(PathResolutionError::NotYetSpecified);
 		}
 		let result = self.load_specific(display, &target_path, None);
@@ -615,10 +614,10 @@ impl ImageCache {
 			let modified = fs::metadata(&path).ok().and_then(|m| m.modified().ok());
 			let mut get_from_cache = false;
 			if let Some(curr_mod_time) = modified {
-				if let Some(mod_time) = tex.mod_time {
-					if mod_time == curr_mod_time {
-						get_from_cache = true;
-					}
+				if let Some(mod_time) = tex.mod_time
+					&& mod_time == curr_mod_time
+				{
+					get_from_cache = true;
 				}
 			} else {
 				get_from_cache = true;
@@ -626,12 +625,8 @@ impl ImageCache {
 			if get_from_cache {
 				let count = tex.frames.len() as isize;
 				if tex.fully_loaded || (frame_id >= 0 && frame_id < count) {
-					let wrapped_id;
-					if frame_id < 0 {
-						wrapped_id = count + (frame_id % count);
-					} else {
-						wrapped_id = frame_id % count;
-					}
+					let wrapped_id =
+						if frame_id < 0 { count + (frame_id % count) } else { frame_id % count };
 					if let Some(frame) = tex.frames.get(wrapped_id as usize) {
 						self.current_frame_idx = wrapped_id as usize;
 						return Ok(frame.clone());
@@ -681,10 +676,10 @@ impl ImageCache {
 						let mut overwrite = true;
 						if let Some(curr_mod_time) = curr_mod_time {
 							let cached = entry.get();
-							if let Some(existing_mod_time) = cached.mod_time {
-								if existing_mod_time == curr_mod_time {
-									overwrite = false;
-								}
+							if let Some(existing_mod_time) = cached.mod_time
+								&& existing_mod_time == curr_mod_time
+							{
+								overwrite = false;
 							}
 						}
 						if overwrite {
@@ -784,12 +779,11 @@ impl ImageCache {
 		req_id: u32,
 		kind: RequestKind,
 	) -> bool {
-		if let RequestKind::Priority { display } = kind {
-			if self.pending_requests.len() >= Self::MAX_PENDING_REQUESTS {
-				if let Err(e) = self.process_prefetched(display) {
-					eprintln!("Error while processing prefetched images:\n{}", e);
-				}
-			}
+		if let RequestKind::Priority { display } = kind
+			&& self.pending_requests.len() >= Self::MAX_PENDING_REQUESTS
+			&& let Err(e) = self.process_prefetched(display)
+		{
+			eprintln!("Error while processing prefetched images:\n{}", e);
 		}
 		if self.pending_requests.len() >= Self::MAX_PENDING_REQUESTS {
 			return false;
@@ -894,10 +888,7 @@ fn get_file_name_and_parent(path: &Path) -> std::io::Result<(OsString, PathBuf)>
 	let file_name = match path.file_name() {
 		Some(f) => f.to_owned(),
 		None => {
-			return Err(io::Error::new(
-				io::ErrorKind::Other,
-				format!("Could not get file name from path {:?}", path),
-			))
+			return Err(io::Error::other(format!("Could not get file name from path {:?}", path)));
 		}
 	};
 	let parent = match path.parent() {
@@ -911,10 +902,10 @@ fn get_file_name_and_parent(path: &Path) -> std::io::Result<(OsString, PathBuf)>
 		None => {
 			let mut path = path.canonicalize()?;
 			if !path.pop() {
-				return Err(io::Error::new(
-					io::ErrorKind::Other,
-					format!("Could not get parent directory of {:?}", path),
-				));
+				return Err(io::Error::other(format!(
+					"Could not get parent directory of {:?}",
+					path
+				)));
 			}
 			path
 		}

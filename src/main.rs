@@ -19,6 +19,7 @@ use gelatin::winit::{
 	window::Icon,
 };
 use gelatin::{
+	NextUpdate, Widget,
 	application::*,
 	button::*,
 	image,
@@ -27,7 +28,6 @@ use gelatin::{
 	misc::*,
 	picture::*,
 	window::{Window, WindowDescriptorBuilder},
-	NextUpdate, Widget,
 };
 
 use crate::configuration::Theme;
@@ -118,10 +118,10 @@ fn main() {
 			window_cache.win_h = if let Some(h) = win_h { *h } else { window_defaults.win_h };
 		}
 
-		if let Some(window_cfg) = window_cfg {
-			if let Some(start_maximized) = window_cfg.start_maximized {
-				window_cache.maximized = start_maximized;
-			}
+		if let Some(window_cfg) = window_cfg
+			&& let Some(start_maximized) = window_cfg.start_maximized
+		{
+			window_cache.maximized = start_maximized;
 		}
 
 		let pos = PhysicalPosition::new(window_cache.win_x, window_cache.win_y);

@@ -1,13 +1,13 @@
 use std::{cell::RefCell, rc::Rc};
 
 use cgmath::{Matrix4, Vector3};
-use glium::{uniform, Frame, Surface};
+use glium::{Frame, Surface, uniform};
 use winit::event::{ElementState, MouseButton};
 
+use crate::NextUpdate;
 use crate::add_common_widget_functions;
 use crate::misc::{Alignment, Length, LogicalRect, LogicalVector, WidgetPlacement};
 use crate::window::RenderValidity;
-use crate::NextUpdate;
 use crate::{DrawContext, Event, EventKind, Widget, WidgetData, WidgetError};
 
 struct SliderData {

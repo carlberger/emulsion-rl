@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 use std::sync::{
-	atomic::{AtomicBool, Ordering},
 	Arc, Condvar, Mutex,
+	atomic::{AtomicBool, Ordering},
 };
 
 use gelatin::image::imageops::{
-	flip_horizontal_in_place, flip_vertical_in_place, rotate180_in_place, rotate270, rotate90,
+	flip_horizontal_in_place, flip_vertical_in_place, rotate90, rotate180_in_place, rotate270,
 };
 
 use crate::image_cache::image_loader::{
-	complex_load_image, ImageLoaderError, LoadResult, Orientation,
+	ImageLoaderError, LoadResult, Orientation, complex_load_image,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -107,49 +107,49 @@ impl ClipboardHandler {
 				}
 			}
 			let result = complex_load_image(&request_path, false, 0, |frame| {
-				if let LoadResult::Frame { mut image, orientation, .. } = frame {
-					if let Ok(clipboard) = &mut clipboard {
-						// Note: the imageops functions use clockwise rotation whereas the
-						// `Orientation` type describes counter-clockwise rotation.
-						image = match orientation {
-							Orientation::Deg0 => image,
-							Orientation::Deg0HorFlip => {
-								flip_horizontal_in_place(&mut image);
-								image
-							}
-							Orientation::Deg90 => rotate270(&image),
-							Orientation::Deg90VerFlip => {
-								let mut result = rotate270(&image);
-								flip_vertical_in_place(&mut result);
-								result
-							}
-							Orientation::Deg180 => {
-								rotate180_in_place(&mut image);
-								image
-							}
-							Orientation::Deg180HorFlip => {
-								// This is identical to just a vertical flip with no rotation.
-								flip_vertical_in_place(&mut image);
-								image
-							}
-							Orientation::Deg270 => rotate90(&image),
-							Orientation::Deg270VerFlip => {
-								let mut result = rotate90(&image);
-								flip_vertical_in_place(&mut result);
-								result
-							}
-						};
-						let (w, h) = image.dimensions();
-						let cb_image = arboard::ImageData {
-							width: w as usize,
-							height: h as usize,
-							bytes: image.into_raw().into(),
-						};
-						if let Err(e) = clipboard.set_image(cb_image) {
-							eprintln!("Could not set the clipboard image, error was: {}", e);
-						} else {
-							return Ok(());
+				if let LoadResult::Frame { mut image, orientation, .. } = frame
+					&& let Ok(clipboard) = &mut clipboard
+				{
+					// Note: the imageops functions use clockwise rotation whereas the
+					// `Orientation` type describes counter-clockwise rotation.
+					image = match orientation {
+						Orientation::Deg0 => image,
+						Orientation::Deg0HorFlip => {
+							flip_horizontal_in_place(&mut image);
+							image
 						}
+						Orientation::Deg90 => rotate270(&image),
+						Orientation::Deg90VerFlip => {
+							let mut result = rotate270(&image);
+							flip_vertical_in_place(&mut result);
+							result
+						}
+						Orientation::Deg180 => {
+							rotate180_in_place(&mut image);
+							image
+						}
+						Orientation::Deg180HorFlip => {
+							// This is identical to just a vertical flip with no rotation.
+							flip_vertical_in_place(&mut image);
+							image
+						}
+						Orientation::Deg270 => rotate90(&image),
+						Orientation::Deg270VerFlip => {
+							let mut result = rotate90(&image);
+							flip_vertical_in_place(&mut result);
+							result
+						}
+					};
+					let (w, h) = image.dimensions();
+					let cb_image = arboard::ImageData {
+						width: w as usize,
+						height: h as usize,
+						bytes: image.into_raw().into(),
+					};
+					if let Err(e) = clipboard.set_image(cb_image) {
+						eprintln!("Could not set the clipboard image, error was: {}", e);
+					} else {
+						return Ok(());
 					}
 				}
 				Err(ImageLoaderError { description: "Could not set the clipboard image.".into() })

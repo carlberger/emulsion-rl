@@ -3,14 +3,13 @@ use std::fs;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
+use std::sync::mpsc::{Receiver, Sender, TryRecvError, channel};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
 use gelatin::image::{
-	self,
+	self, AnimationDecoder, ImageFormat,
 	codecs::{gif::GifDecoder, png::PngDecoder},
-	AnimationDecoder, ImageFormat,
 };
 use usvg::fontdb;
 
@@ -42,7 +41,7 @@ pub type Result<T> = std::result::Result<T, ImageLoaderError>;
 /// which will only carry out the request if the focused request id matches their request or
 /// if the focused is set to `NON_EXISTENT_REQUEST_ID`
 pub static PRIORITY_REQUEST_ID: AtomicU32 = AtomicU32::new(0); // The first request usually
-pub const NON_EXISTENT_REQUEST_ID: u32 = std::u32::MAX;
+pub const NON_EXISTENT_REQUEST_ID: u32 = u32::MAX;
 
 pub enum ImgFormat {
 	Image(ImageFormat),
@@ -164,7 +163,7 @@ pub fn load_svg(path: &std::path::Path) -> Result<image::RgbaImage> {
 		let mut fontdb = fontdb::Database::new();
 		fontdb.load_system_fonts();
 
-		usvg::Tree::from_data(&svg_data, &opt, &fontdb)?
+		usvg::Tree::from_data(&svg_data, &opt)?
 	};
 	let width = rtree.size().width();
 	let height = rtree.size().height();
@@ -256,18 +255,18 @@ fn load_animation(
 }
 
 pub fn is_file_supported(filename: &Path) -> bool {
-	if let Some(ext) = filename.extension() {
-		if let Some(ext) = ext.to_str() {
-			let ext = ext.to_lowercase();
-			match ext.as_str() {
-				"jpg" | "jpeg" | "png" | "apng" | "gif" | "webp" | "tif" | "tiff" | "tga"
-				| "bmp" | "ico" | "hdr" | "pbm" | "pam" | "ppm" | "pgm" => {
-					return true;
-				}
-				#[cfg(feature = "avif")]
-				"avif" => return true,
-				_ => (),
+	if let Some(ext) = filename.extension()
+		&& let Some(ext) = ext.to_str()
+	{
+		let ext = ext.to_lowercase();
+		match ext.as_str() {
+			"jpg" | "jpeg" | "png" | "apng" | "gif" | "webp" | "tif" | "tiff" | "tga" | "bmp"
+			| "ico" | "hdr" | "pbm" | "pam" | "ppm" | "pgm" => {
+				return true;
 			}
+			#[cfg(feature = "avif")]
+			"avif" => return true,
+			_ => (),
 		}
 	}
 	detect_format(filename).is_ok()

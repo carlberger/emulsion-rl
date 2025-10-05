@@ -31,8 +31,7 @@ impl From<std::io::Error> for Error {
 }
 impl From<Error> for std::io::Error {
 	fn from(value: Error) -> Self {
-		use std::io::ErrorKind;
-		std::io::Error::new(ErrorKind::Other, format!("directory::Error: {}", value))
+		std::io::Error::other(format!("directory::Error: {}", value))
 	}
 }
 
@@ -159,12 +158,12 @@ impl Directory {
 		if !self.check_filter_ready() {
 			return Err(Error::WaitingOnFolderFilter);
 		}
-		if let Some(file_idx) = self.img_i_to_file_i.get(index) {
-			if *file_idx < self.files.len() {
-				self.curr_file_idx = *file_idx;
-				self.curr_image_idx = index;
-				return Ok(());
-			}
+		if let Some(file_idx) = self.img_i_to_file_i.get(index)
+			&& *file_idx < self.files.len()
+		{
+			self.curr_file_idx = *file_idx;
+			self.curr_image_idx = index;
+			return Ok(());
 		}
 		Err(Error::Other("Could not find image index".to_string()))
 	}
@@ -212,11 +211,7 @@ impl Directory {
 		if !self.check_filter_ready() {
 			return None;
 		}
-		if let Some(i) = self.img_i_to_file_i.get(idx) {
-			Some(&self.files[*i])
-		} else {
-			None
-		}
+		if let Some(i) = self.img_i_to_file_i.get(idx) { Some(&self.files[*i]) } else { None }
 	}
 
 	pub fn update_directory(&mut self) -> Result<()> {

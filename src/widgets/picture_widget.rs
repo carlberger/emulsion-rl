@@ -8,7 +8,7 @@ use std::{
 
 use gelatin::{
 	cgmath::{Matrix4, Vector2, Vector3},
-	glium::{uniform, uniforms::MagnifySamplerFilter, Frame, Program, Surface},
+	glium::{Frame, Program, Surface, uniform, uniforms::MagnifySamplerFilter},
 	shaders::ShaderDescriptor,
 	winit::{
 		event::{ElementState, MouseButton},
@@ -17,18 +17,18 @@ use gelatin::{
 };
 
 use gelatin::{
+	Display, DrawContext, Event, EventKind, NextUpdate, Widget, WidgetData, WidgetError,
 	add_common_widget_functions,
 	application::request_exit,
 	misc::{Alignment, Length, LogicalRect, LogicalVector, WidgetPlacement},
 	window::{RenderValidity, Window},
 	winit::keyboard::ModifiersState,
-	Display, DrawContext, Event, EventKind, NextUpdate, Widget, WidgetData, WidgetError,
 };
 
 use crate::{
 	clipboard_handler::ClipboardHandler,
 	configuration::{Antialias, Cache, Configuration},
-	image_cache::{image_loader::Orientation, AnimationFrameTexture},
+	image_cache::{AnimationFrameTexture, image_loader::Orientation},
 	input_handling::*,
 	playback_manager::*,
 	shaders,
@@ -555,21 +555,21 @@ impl PictureWidget {
 				action_triggered(&borrowed.configuration, $action_name, input_key, modifiers)
 			};
 		}
-		if triggered!(TOGGLE_FULLSCREEN_NAME) {
-			if let Some(window) = borrowed.window.upgrade() {
-				let fullscreen = !window.fullscreen();
-				window.set_fullscreen(fullscreen);
-				borrowed.bottom_bar.set_visible_if_should_show(!fullscreen);
-			}
+		if triggered!(TOGGLE_FULLSCREEN_NAME)
+			&& let Some(window) = borrowed.window.upgrade()
+		{
+			let fullscreen = !window.fullscreen();
+			window.set_fullscreen(fullscreen);
+			borrowed.bottom_bar.set_visible_if_should_show(!fullscreen);
 		}
-		if triggered!(ESCAPE_NAME) {
-			if let Some(window) = borrowed.window.upgrade() {
-				if window.fullscreen() {
-					window.set_fullscreen(false);
-					borrowed.bottom_bar.set_visible_if_should_show(true);
-				} else {
-					request_exit();
-				}
+		if triggered!(ESCAPE_NAME)
+			&& let Some(window) = borrowed.window.upgrade()
+		{
+			if window.fullscreen() {
+				window.set_fullscreen(false);
+				borrowed.bottom_bar.set_visible_if_should_show(true);
+			} else {
+				request_exit();
 			}
 		}
 		if triggered!(PLAY_ANIM_NAME) {
@@ -615,31 +615,30 @@ impl PictureWidget {
 			}
 			borrowed.render_validity.invalidate();
 		}
-		if triggered!(IMG_DEL_NAME) {
-			if let LoadedImgPath::Loaded(path) = borrowed.playback_manager.shown_file_path() {
-				if let Err(e) = trash::delete(path) {
-					eprintln!("Error while moving file '{:?}' to trash: {:?}", path, e);
-				}
-				if let Err(e) = borrowed.playback_manager.update_directory() {
-					eprintln!("Error while updating directory {:?}", e);
-				}
-				borrowed.render_validity.invalidate();
+		if triggered!(IMG_DEL_NAME)
+			&& let LoadedImgPath::Loaded(path) = borrowed.playback_manager.shown_file_path()
+		{
+			if let Err(e) = trash::delete(path) {
+				eprintln!("Error while moving file '{:?}' to trash: {:?}", path, e);
 			}
+			if let Err(e) = borrowed.playback_manager.update_directory() {
+				eprintln!("Error while updating directory {:?}", e);
+			}
+			borrowed.render_validity.invalidate();
 		}
-		if triggered!(IMG_COPY_NAME) {
-			if let LoadedImgPath::Loaded(path) = borrowed.playback_manager.shown_file_path().clone()
-			{
-				let request_started;
-				if let Some(clipboard_handler) = &mut borrowed.clipboard_handler {
-					request_started = true;
-					clipboard_handler.request_copy(path);
-					borrowed.copy_notifications.set_started();
-				} else {
-					request_started = false;
-				}
-				if request_started {
-					borrowed.clipboard_request_was_pending = true;
-				}
+		if triggered!(IMG_COPY_NAME)
+			&& let LoadedImgPath::Loaded(path) = borrowed.playback_manager.shown_file_path().clone()
+		{
+			let request_started;
+			if let Some(clipboard_handler) = &mut borrowed.clipboard_handler {
+				request_started = true;
+				clipboard_handler.request_copy(path);
+				borrowed.copy_notifications.set_started();
+			} else {
+				request_started = false;
+			}
+			if request_started {
+				borrowed.clipboard_request_was_pending = true;
 			}
 		}
 		if let LoadedImgPath::Loaded(img_path) = borrowed.playback_manager.shown_file_path() {
@@ -697,10 +696,10 @@ impl Widget for PictureWidget {
 		);
 		if prev_texture.is_none() != new_texture.is_none() {
 			data.render_validity.invalidate();
-		} else if let (Some(prev_tex), Some(new_tex)) = (prev_texture, new_texture) {
-			if !Rc::ptr_eq(&prev_tex.tex_grid, &new_tex.tex_grid) {
-				data.render_validity.invalidate();
-			}
+		} else if let (Some(prev_tex), Some(new_tex)) = (prev_texture, new_texture)
+			&& !Rc::ptr_eq(&prev_tex.tex_grid, &new_tex.tex_grid)
+		{
+			data.render_validity.invalidate();
 		}
 		if let Some(clipboard_handler) = &data.clipboard_handler {
 			let clipboard_result = clipboard_handler.try_get_result();

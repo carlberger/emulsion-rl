@@ -1,5 +1,7 @@
 use cgmath::{Matrix4, Vector3};
+// use winit::raw_window_handle::WindowHandle;
 use glium::{
+	Blend, BlendingFunction, Display, Frame, IndexBuffer, Program, Rect, Surface, VertexBuffer,
 	glutin::{
 		self,
 		config::{Api, ConfigSurfaceTypes, GlConfig},
@@ -7,23 +9,22 @@ use glium::{
 		display::{GetGlDisplay, GlDisplay},
 		surface::{GlSurface, WindowSurface},
 	},
-	uniform, Blend, BlendingFunction, Display, Frame, IndexBuffer, Program, Rect, Surface,
-	VertexBuffer,
+	uniform,
 };
 use log::{debug, error, warn};
-use raw_window_handle::HasRawWindowHandle;
+use raw_window_handle::HasWindowHandle;
 use winit::{
 	dpi::{PhysicalPosition, PhysicalSize},
 	event::WindowEvent,
-	event_loop::{EventLoop, EventLoopWindowTarget},
+	event_loop::{EventLoop, ActiveEventLoop},
 	keyboard::ModifiersState,
-	window::{CursorIcon, Fullscreen, Icon, WindowBuilder, WindowId},
+	window::{CursorIcon, Fullscreen, Icon, WindowAttributes, WindowId},
 };
 
 #[cfg(not(any(target_os = "macos", windows)))]
 use winit::platform::{
-	wayland::{EventLoopWindowTargetExtWayland, WindowBuilderExtWayland},
-	x11::WindowBuilderExtX11,
+	wayland::{ActiveEventLoopExtWayland},
+	
 };
 
 use std::{
@@ -41,12 +42,12 @@ use derive_builder::Builder;
 
 use crate::shaders;
 use crate::{
-	application::Application,
-	shaders::{shader_from_source, ShaderDescriptor},
+	DrawContext, Event, EventKind, NextUpdate, Vertex, Widget,
+	misc::{FromPhysical, LogicalRect, LogicalVector},
 };
 use crate::{
-	misc::{FromPhysical, LogicalRect, LogicalVector},
-	DrawContext, Event, EventKind, NextUpdate, Vertex, Widget,
+	application::Application,
+	shaders::{ShaderDescriptor, shader_from_source},
 };
 
 const EVENT_UPDATE_DELTA: std::time::Duration = std::time::Duration::from_millis(2);
@@ -200,15 +201,19 @@ impl Window {
 
 		const MINIMUM_WINDOW_SIZE: u32 = 200;
 		if desc.size.width < MINIMUM_WINDOW_SIZE {
-			warn!("Window width was specified to be zero. Defaulting to {MINIMUM_WINDOW_SIZE} instead");
+			warn!(
+				"Window width was specified to be zero. Defaulting to {MINIMUM_WINDOW_SIZE} instead"
+			);
 			desc.size.width = MINIMUM_WINDOW_SIZE;
 		}
 		if desc.size.height < MINIMUM_WINDOW_SIZE {
-			warn!("Window height was specified to be zero. Defaulting to {MINIMUM_WINDOW_SIZE} instead");
+			warn!(
+				"Window height was specified to be zero. Defaulting to {MINIMUM_WINDOW_SIZE} instead"
+			);
 			desc.size.height = MINIMUM_WINDOW_SIZE;
 		}
 
-		let mut window_builder = WindowBuilder::new()
+		let mut window_builder = winit::window::Window::default_attributes()
 			.with_title("Loading")
 			.with_fullscreen(None)
 			.with_window_icon(desc.icon)
@@ -216,11 +221,13 @@ impl Window {
 
 		if !desc.maximized {
 			window_builder = window_builder.with_inner_size(desc.size);
+			/*
+
 			if let Some(window_pos) = desc.position {
 				// Check if the window would be placed outside of the screen
 				// (This can happen when using two displays, then disconnecting
 				// one of the displays and starting up emulsion)
-				let in_bounds = application.event_loop.available_monitors().any(|monitor| {
+				let in_bounds = &application.event_loop.available_monitors().any(|monitor| {
 					debug!("Monitor pos: {:?}", monitor.position());
 					debug!("Monitor size: {:?}", monitor.size());
 					is_in_bounds(monitor.position(), monitor.size(), window_pos)
@@ -229,12 +236,15 @@ impl Window {
 					window_builder = window_builder.with_position(window_pos);
 				}
 			}
+			 */
+			// window_builder = window_builder.with_position(window_pos);
 		}
 
+		/*
 		#[cfg(not(any(target_os = "macos", windows)))]
 		let window_builder = if let Some(app_id) = desc.app_id {
 			let is_wayland = std::env::var("XDG_SESSION_TYPE")
-				.map_or(false, |var| var.to_lowercase().contains("wayland"));
+				.is_ok_and(|var| var.to_lowercase().contains("wayland"));
 			if is_wayland {
 				WindowBuilderExtWayland::with_name(window_builder, &app_id, app_id.to_lowercase())
 			} else {
@@ -243,11 +253,12 @@ impl Window {
 		} else {
 			window_builder
 		};
+		 */
 
 		// let window = window.build(&application.event_loop).unwrap();
 		let (window, display) = Self::build_winit_window(window_builder, &application.event_loop);
 
-		window.set_cursor_icon(CursorIcon::Default);
+		window.set_cursor(CursorIcon::Default);
 
 		// All the draw stuff
 		use glium::index::PrimitiveType;
@@ -335,13 +346,13 @@ impl Window {
 	/// This is mostly copy-pasted from `glutin::SimpleWindowBuilder::build`
 	/// but I use some custom configuration settings here
 	fn build_winit_window<UserEvent>(
-		builder: WindowBuilder,
+		builder: WindowAttributes,
 		event_loop: &EventLoop<UserEvent>,
 	) -> (winit::window::Window, Display<WindowSurface>) {
 		// let is_maximized = builder.m
 		// First we start by opening a new Window
 		let display_builder =
-			glutin_winit::DisplayBuilder::new().with_window_builder(Some(builder));
+			glutin_winit::DisplayBuilder::new().with_window_attributes(Some(builder));
 
 		let config_template_builder = glutin::config::ConfigTemplateBuilder::new()
 			.prefer_hardware_accelerated(Some(true))
@@ -368,7 +379,7 @@ impl Window {
 			glutin::surface::SurfaceAttributesBuilder::<glutin::surface::WindowSurface>::new()
 				.with_srgb(Some(true))
 				.build(
-					window.raw_window_handle(),
+					window.window_handle().unwrap().into(),
 					NonZeroU32::new(width).unwrap(),
 					NonZeroU32::new(height).unwrap(),
 				);
@@ -381,7 +392,7 @@ impl Window {
 			.with_profile(GlProfile::Core) // requires OpenGL 3.3
 			.with_context_api(ContextApi::OpenGl(Some(Version::new(3, 3))))
 			.with_release_behavior(glutin::context::ReleaseBehavior::None)
-			.build(Some(window.raw_window_handle()));
+			.build(Some(window.window_handle().unwrap().into()));
 		let current_context = unsafe {
 			gl_config
 				.display()
@@ -429,7 +440,7 @@ impl Window {
 		&self,
 		native_event: WindowEvent,
 		// allowing event_loop to be unused because it's only used on some platforms
-		#[allow(unused_variables)] event_loop: &EventLoopWindowTarget<UserEvent>,
+		#[allow(unused_variables)] event_loop: &ActiveEventLoop,
 	) {
 		use winit::event::MouseScrollDelta;
 

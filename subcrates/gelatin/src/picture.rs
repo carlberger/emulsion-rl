@@ -2,7 +2,7 @@ use glium::{
 	backend::Facade,
 	texture::{RawImage2d, SrgbTexture2d},
 };
-use image::{error::ImageError, RgbaImage};
+use image::{RgbaImage, error::ImageError};
 
 use std::{
 	cell::{Ref, RefCell},
@@ -16,11 +16,7 @@ pub struct PictureTextureRef<'a> {
 impl<'a> Deref for PictureTextureRef<'a> {
 	type Target = SrgbTexture2d;
 	fn deref(&self) -> &SrgbTexture2d {
-		if let PictureData::Gpu(texture) = &*self.pic_data {
-			texture
-		} else {
-			unreachable!()
-		}
+		if let PictureData::Gpu(texture) = &*self.pic_data { texture } else { unreachable!() }
 	}
 }
 
@@ -86,7 +82,7 @@ impl Picture {
 		Ok(PictureMetadata { width: dimensions.0, height: dimensions.1 })
 	}
 
-	pub fn texture<F: Facade>(&self, facade: &F) -> Result<PictureTextureRef, ImageError> {
+	pub fn texture<F: Facade>(&self, facade: &F) -> Result<PictureTextureRef<'_>, ImageError> {
 		self.upload_to_texture(facade)?;
 		if let PictureData::Gpu(_) = &*self.data.borrow() {
 			Ok(PictureTextureRef { pic_data: self.data.borrow() })
