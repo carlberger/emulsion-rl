@@ -8,7 +8,7 @@ use std::{
 
 use winit::{
 	event::{Event, WindowEvent},
-	event_loop::{ControlFlow, EventLoop, EventLoopProxy, ActiveEventLoop},
+	event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy},
 	window::WindowId,
 };
 
@@ -179,7 +179,10 @@ where
 						} else {
 							destroyed = false;
 						}
-						windows.get(&window_id).unwrap().process_event::<UserEvent>(event, event_loop);
+						windows
+							.get(&window_id)
+							.unwrap()
+							.process_event::<UserEvent>(event, event_loop);
 						if destroyed {
 							windows.remove(&window_id);
 						}

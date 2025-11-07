@@ -16,16 +16,13 @@ use raw_window_handle::HasWindowHandle;
 use winit::{
 	dpi::{PhysicalPosition, PhysicalSize},
 	event::WindowEvent,
-	event_loop::{EventLoop, ActiveEventLoop},
+	event_loop::{ActiveEventLoop, EventLoop},
 	keyboard::ModifiersState,
 	window::{CursorIcon, Fullscreen, Icon, WindowAttributes, WindowId},
 };
 
 #[cfg(not(any(target_os = "macos", windows)))]
-use winit::platform::{
-	wayland::{ActiveEventLoopExtWayland},
-	
-};
+use winit::platform::wayland::ActiveEventLoopExtWayland;
 
 use std::{
 	cell::{Cell, RefCell, RefMut},
